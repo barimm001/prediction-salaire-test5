@@ -87,19 +87,23 @@ async def initialize_models():
     global models_data, encoders, scaler
     
     # Create sample salary dataset based on the structure
+    np.random.seed(42)  # For reproducible results
+    n_samples = 200
+    
     sample_data = {
-        'work_year': [2023, 2023, 2024, 2024, 2023, 2024, 2023, 2024, 2023, 2024,
-                      2023, 2024, 2023, 2024, 2023, 2024, 2023, 2024, 2023, 2024] * 10,
-        'experience_level': ['EN', 'MI', 'SE', 'EX'] * 50,
-        'employment_type': ['FT', 'PT', 'CT', 'FL'] * 50,
-        'job_title': ['Data Scientist', 'Machine Learning Engineer', 'Data Analyst', 
-                     'Software Engineer', 'Product Manager', 'Data Engineer',
-                     'Research Scientist', 'AI Engineer', 'Backend Developer',
-                     'Full Stack Developer'] * 20,
-        'employee_residence': ['US', 'CA', 'GB', 'DE', 'FR', 'IN', 'AU', 'NL', 'CH', 'ES'] * 20,
-        'remote_ratio': [0, 50, 100] * 67 + [0],
-        'company_location': ['US', 'CA', 'GB', 'DE', 'FR', 'IN', 'AU', 'NL', 'CH', 'ES'] * 20,
-        'company_size': ['S', 'M', 'L'] * 67 + ['S'],
+        'work_year': np.random.choice([2023, 2024], n_samples),
+        'experience_level': np.random.choice(['EN', 'MI', 'SE', 'EX'], n_samples),
+        'employment_type': np.random.choice(['FT', 'PT', 'CT', 'FL'], n_samples),
+        'job_title': np.random.choice([
+            'Data Scientist', 'Machine Learning Engineer', 'Data Analyst', 
+            'Software Engineer', 'Product Manager', 'Data Engineer',
+            'Research Scientist', 'AI Engineer', 'Backend Developer',
+            'Full Stack Developer'
+        ], n_samples),
+        'employee_residence': np.random.choice(['US', 'CA', 'GB', 'DE', 'FR', 'IN', 'AU', 'NL', 'CH', 'ES'], n_samples),
+        'remote_ratio': np.random.choice([0, 25, 50, 75, 100], n_samples),
+        'company_location': np.random.choice(['US', 'CA', 'GB', 'DE', 'FR', 'IN', 'AU', 'NL', 'CH', 'ES'], n_samples),
+        'company_size': np.random.choice(['S', 'M', 'L'], n_samples),
     }
     
     # Generate realistic salaries based on features
