@@ -108,7 +108,7 @@ async def initialize_models():
     
     # Generate realistic salaries based on features
     salaries = []
-    for i in range(200):
+    for i in range(n_samples):
         base_salary = 70000
         
         # Experience level adjustments
