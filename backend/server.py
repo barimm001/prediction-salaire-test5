@@ -137,7 +137,7 @@ class TaskCreate(BaseModel):
     assigned_to: str  # employee_id
     priority: str = Field(..., pattern="^(low|medium|high|urgent)$")
     due_date: datetime
-    status: str = Field(default="pending", regex="^(pending|in_progress|completed|cancelled)$")
+    status: str = Field(default="pending", pattern="^(pending|in_progress|completed|cancelled)$")
 
 class Task(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
