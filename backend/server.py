@@ -57,7 +57,7 @@ class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=6)
-    role: str = Field(..., regex="^(admin|employee|financial_analyst)$")
+    role: str = Field(..., pattern="^(admin|employee|financial_analyst)$")
     name: str = Field(..., min_length=3, max_length=100)
     
     @validator('username')
