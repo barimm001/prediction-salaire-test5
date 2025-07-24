@@ -249,7 +249,6 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Authentication System - Email/Password"
     - "Frontend Authentication UI"
     - "Financial Analyst Dashboard"
   stuck_tasks: []
