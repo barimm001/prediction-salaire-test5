@@ -105,6 +105,42 @@
 user_problem_statement: "Créer une application web full‑stack de prédiction de salaires et de gestion des employés, avec tableau de bord pour plusieurs profils d'utilisateur. Core ML pipeline avec multiple models (Linear Regression, Random Forest, XGBoost, LSTM, MLP), FastAPI backend, React frontend, MongoDB database. Authentification par email/mot de passe (min 6 caractères), message d'alerte si email déjà utilisé. Tableau de bord analyste financier avec courbes résumé annuel, top jobs/compétences, analyse masse salariale, comparaison modèles, visualisations interactives."
 
 backend:
+  - task: "Authentication System - Email/Password"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "JWT-based authentication system implemented with bcrypt password hashing, user registration, login, role-based access control (admin, employee, financial_analyst), and password validation (min 6 chars). Need to test registration/login flow and duplicate email validation."
+
+  - task: "Frontend Authentication UI"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "AuthContext implemented with React context, login/register forms, token management, role-based navigation, and client-side validation. Need to test complete auth flow and error handling for duplicate emails."
+
+  - task: "Financial Analyst Dashboard"
+    implemented: false
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Need to implement advanced dashboard for financial analysts with: yearly summary curves (recruitment totals, salary evolution), top jobs/skills rankings, salary mass analysis (boxplots by sector, correlation heatmaps), model comparison charts, interactive visualizations with filters (country, job, experience), and export functionality."
+
   - task: "ML Models Training & API Setup"
     implemented: true
     working: true
