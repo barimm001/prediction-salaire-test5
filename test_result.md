@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Créer une application web full‑stack de prédiction de salaires et de gestion des employés, avec tableau de bord pour plusieurs profils d'utilisateur. Core ML pipeline avec multiple models (Linear Regression, Random Forest, XGBoost, LSTM, MLP), FastAPI backend, React frontend, MongoDB database"
+user_problem_statement: "Créer une application web full‑stack de prédiction de salaires et de gestion des employés, avec tableau de bord pour plusieurs profils d'utilisateur. Core ML pipeline avec multiple models (Linear Regression, Random Forest, XGBoost, LSTM, MLP), FastAPI backend, React frontend, MongoDB database. Authentification par email/mot de passe (min 6 caractères), message d'alerte si email déjà utilisé. Tableau de bord analyste financier avec courbes résumé annuel, top jobs/compétences, analyse masse salariale, comparaison modèles, visualisations interactives."
 
 backend:
   - task: "ML Models Training & API Setup"
