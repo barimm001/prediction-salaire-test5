@@ -157,7 +157,7 @@ class MeetingCreate(BaseModel):
     start_time: datetime
     end_time: datetime
     attendees: List[str] = Field(default_factory=list)  # employee ids
-    meeting_type: str = Field(default="team", regex="^(team|one_on_one|all_hands|client)$")
+    meeting_type: str = Field(default="team", pattern="^(team|one_on_one|all_hands|client)$")
 
 class Meeting(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
