@@ -704,16 +704,32 @@ class BackendTester:
             print("❌ API is not accessible. Stopping tests.")
             return False
         
-        # Test 2: Available Options API
+        # Test 2: Authentication System Tests
+        print("🔐 AUTHENTICATION SYSTEM TESTS")
+        print("-" * 40)
+        
+        # Test user registration
+        registration_result = self.test_user_registration()
+        
+        # Test user login
+        login_result = self.test_user_login()
+        
+        # Test protected routes and role-based access
+        protected_routes_result = self.test_protected_routes()
+        
+        print("\n📊 ML MODELS & PREDICTION TESTS")
+        print("-" * 40)
+        
+        # Test 3: Available Options API
         self.test_available_options_api()
         
-        # Test 3: Models Comparison API
+        # Test 4: Models Comparison API
         models_result = self.test_models_comparison_api()
         
-        # Test 4: Salary Prediction API
+        # Test 5: Salary Prediction API
         prediction_result = self.test_salary_prediction_api()
         
-        # Test 5: Edge Cases
+        # Test 6: Edge Cases
         edge_cases_result = self.test_edge_cases()
         
         # Summary
@@ -730,9 +746,26 @@ class BackendTester:
         print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
         print()
         
+        # Authentication Tests Summary
+        auth_tests = [result for result in self.test_results if any(keyword in result["test"] for keyword in ["Registration", "Login", "Protected Route", "Role-based Access", "Invalid Token"])]
+        auth_passed = sum(1 for result in auth_tests if result["success"])
+        auth_total = len(auth_tests)
+        
+        if auth_total > 0:
+            print(f"🔐 Authentication Tests: {auth_passed}/{auth_total} passed ({(auth_passed/auth_total)*100:.1f}%)")
+        
+        # ML Tests Summary
+        ml_tests = [result for result in self.test_results if any(keyword in result["test"] for keyword in ["Models Comparison", "Salary Prediction", "Available Options", "Edge Case"])]
+        ml_passed = sum(1 for result in ml_tests if result["success"])
+        ml_total = len(ml_tests)
+        
+        if ml_total > 0:
+            print(f"📊 ML & Prediction Tests: {ml_passed}/{ml_total} passed ({(ml_passed/ml_total)*100:.1f}%)")
+        print()
+        
         # Critical Issues
         critical_failures = [result for result in self.test_results if not result["success"] and 
-                           any(keyword in result["test"] for keyword in ["API Health", "Models Comparison", "Salary Prediction"])]
+                           any(keyword in result["test"] for keyword in ["API Health", "Registration", "Login", "Protected Route", "Models Comparison", "Salary Prediction"])]
         
         if critical_failures:
             print("🚨 CRITICAL ISSUES:")
@@ -742,11 +775,17 @@ class BackendTester:
         
         # Overall Status
         overall_success = passed_tests >= total_tests * 0.8  # 80% pass rate
-        status = "✅ OVERALL: BACKEND TESTS PASSED" if overall_success else "❌ OVERALL: BACKEND TESTS FAILED"
+        auth_success = auth_passed >= auth_total * 0.8 if auth_total > 0 else True
+        
+        if overall_success and auth_success:
+            status = "✅ OVERALL: BACKEND TESTS PASSED"
+        else:
+            status = "❌ OVERALL: BACKEND TESTS FAILED"
+            
         print(status)
         print("=" * 80)
         
-        return overall_success
+        return overall_success and auth_success
 
 if __name__ == "__main__":
     tester = BackendTester(BACKEND_URL)
