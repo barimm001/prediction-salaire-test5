@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
 Backend API Testing Suite for Salary Prediction & Employee Management System
-Tests all ML models, prediction endpoints, and API functionality
+Tests authentication system, ML models, prediction endpoints, and API functionality
 """
 
 import requests
 import json
 import time
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import sys
+import uuid
 
 # Backend URL from environment
 BACKEND_URL = "https://ea82922d-231d-469f-8a0e-e02931dea42c.preview.emergentagent.com/api"
@@ -18,6 +19,7 @@ class BackendTester:
         self.base_url = base_url
         self.session = requests.Session()
         self.test_results = []
+        self.auth_tokens = {}  # Store tokens for different users
         
     def log_test(self, test_name: str, success: bool, details: str = "", response_data: Any = None):
         """Log test results"""
@@ -51,6 +53,346 @@ class BackendTester:
         except Exception as e:
             self.log_test("API Health Check", False, f"Connection error: {str(e)}")
             return False
+
+    def test_user_registration(self):
+        """Test user registration with various scenarios"""
+        test_cases = [
+            {
+                "name": "Valid Admin Registration",
+                "data": {
+                    "username": f"admin_user_{uuid.uuid4().hex[:8]}",
+                    "email": f"admin_{uuid.uuid4().hex[:8]}@company.com",
+                    "password": "securepass123",
+                    "role": "admin",
+                    "name": "Admin User"
+                },
+                "should_succeed": True
+            },
+            {
+                "name": "Valid Employee Registration", 
+                "data": {
+                    "username": f"employee_user_{uuid.uuid4().hex[:8]}",
+                    "email": f"employee_{uuid.uuid4().hex[:8]}@company.com",
+                    "password": "password123",
+                    "role": "employee",
+                    "name": "Employee User"
+                },
+                "should_succeed": True
+            },
+            {
+                "name": "Valid Financial Analyst Registration",
+                "data": {
+                    "username": f"analyst_user_{uuid.uuid4().hex[:8]}",
+                    "email": f"analyst_{uuid.uuid4().hex[:8]}@company.com", 
+                    "password": "analyst123",
+                    "role": "financial_analyst",
+                    "name": "Financial Analyst"
+                },
+                "should_succeed": True
+            },
+            {
+                "name": "Password Too Short (5 chars)",
+                "data": {
+                    "username": f"short_pass_{uuid.uuid4().hex[:8]}",
+                    "email": f"shortpass_{uuid.uuid4().hex[:8]}@company.com",
+                    "password": "12345",  # Only 5 characters
+                    "role": "employee",
+                    "name": "Short Pass User"
+                },
+                "should_succeed": False
+            },
+            {
+                "name": "Invalid Email Format",
+                "data": {
+                    "username": f"invalid_email_{uuid.uuid4().hex[:8]}",
+                    "email": "invalid-email-format",
+                    "password": "password123",
+                    "role": "employee", 
+                    "name": "Invalid Email User"
+                },
+                "should_succeed": False
+            },
+            {
+                "name": "Invalid Role",
+                "data": {
+                    "username": f"invalid_role_{uuid.uuid4().hex[:8]}",
+                    "email": f"invalidrole_{uuid.uuid4().hex[:8]}@company.com",
+                    "password": "password123",
+                    "role": "invalid_role",
+                    "name": "Invalid Role User"
+                },
+                "should_succeed": False
+            }
+        ]
+        
+        all_passed = True
+        registered_users = []
+        
+        for test_case in test_cases:
+            try:
+                response = self.session.post(
+                    f"{self.base_url}/auth/register",
+                    json=test_case["data"],
+                    headers={"Content-Type": "application/json"}
+                )
+                
+                if test_case["should_succeed"]:
+                    if response.status_code == 200:
+                        data = response.json()
+                        required_fields = ["id", "username", "email", "role", "name", "created_at", "is_active"]
+                        missing_fields = [field for field in required_fields if field not in data]
+                        
+                        if missing_fields:
+                            self.log_test(f"Registration - {test_case['name']}", False, f"Missing response fields: {missing_fields}", data)
+                            all_passed = False
+                        else:
+                            self.log_test(f"Registration - {test_case['name']}", True, f"User registered successfully: {data['email']}, Role: {data['role']}")
+                            registered_users.append(test_case["data"])
+                    else:
+                        self.log_test(f"Registration - {test_case['name']}", False, f"HTTP {response.status_code}", response.text)
+                        all_passed = False
+                else:
+                    if response.status_code in [400, 422]:
+                        self.log_test(f"Registration - {test_case['name']}", True, f"Correctly rejected with HTTP {response.status_code}")
+                    else:
+                        self.log_test(f"Registration - {test_case['name']}", False, f"Should have failed but got HTTP {response.status_code}", response.text)
+                        all_passed = False
+                        
+            except Exception as e:
+                self.log_test(f"Registration - {test_case['name']}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        # Test duplicate email registration
+        if registered_users:
+            duplicate_user = registered_users[0].copy()
+            duplicate_user["username"] = f"duplicate_{uuid.uuid4().hex[:8]}"
+            
+            try:
+                response = self.session.post(
+                    f"{self.base_url}/auth/register",
+                    json=duplicate_user,
+                    headers={"Content-Type": "application/json"}
+                )
+                
+                if response.status_code == 400:
+                    response_data = response.json()
+                    if "already exists" in response_data.get("detail", "").lower():
+                        self.log_test("Registration - Duplicate Email Validation", True, "Correctly rejected duplicate email")
+                    else:
+                        self.log_test("Registration - Duplicate Email Validation", False, f"Wrong error message: {response_data.get('detail')}", response_data)
+                        all_passed = False
+                else:
+                    self.log_test("Registration - Duplicate Email Validation", False, f"Should have failed with 400 but got HTTP {response.status_code}", response.text)
+                    all_passed = False
+                    
+            except Exception as e:
+                self.log_test("Registration - Duplicate Email Validation", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        # Store registered users for login tests
+        self.registered_users = registered_users
+        return all_passed
+
+    def test_user_login(self):
+        """Test user login with various scenarios"""
+        if not hasattr(self, 'registered_users') or not self.registered_users:
+            self.log_test("Login Tests", False, "No registered users available for login testing")
+            return False
+        
+        all_passed = True
+        
+        # Test valid logins for each registered user
+        for user_data in self.registered_users:
+            try:
+                login_data = {
+                    "email": user_data["email"],
+                    "password": user_data["password"]
+                }
+                
+                response = self.session.post(
+                    f"{self.base_url}/auth/login",
+                    json=login_data,
+                    headers={"Content-Type": "application/json"}
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    required_fields = ["access_token", "token_type", "user"]
+                    missing_fields = [field for field in required_fields if field not in data]
+                    
+                    if missing_fields:
+                        self.log_test(f"Login - {user_data['role']} user", False, f"Missing response fields: {missing_fields}", data)
+                        all_passed = False
+                    else:
+                        # Validate token format
+                        token = data["access_token"]
+                        if not token or len(token) < 10:
+                            self.log_test(f"Login - {user_data['role']} user", False, "Invalid JWT token format", data)
+                            all_passed = False
+                        else:
+                            # Store token for protected route tests
+                            self.auth_tokens[user_data["role"]] = token
+                            self.log_test(f"Login - {user_data['role']} user", True, f"Login successful, token received, user: {data['user']['email']}")
+                else:
+                    self.log_test(f"Login - {user_data['role']} user", False, f"HTTP {response.status_code}", response.text)
+                    all_passed = False
+                    
+            except Exception as e:
+                self.log_test(f"Login - {user_data['role']} user", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        # Test invalid login scenarios
+        invalid_login_cases = [
+            {
+                "name": "Wrong Password",
+                "data": {
+                    "email": self.registered_users[0]["email"],
+                    "password": "wrongpassword123"
+                }
+            },
+            {
+                "name": "Non-existent Email",
+                "data": {
+                    "email": f"nonexistent_{uuid.uuid4().hex[:8]}@company.com",
+                    "password": "password123"
+                }
+            },
+            {
+                "name": "Invalid Email Format",
+                "data": {
+                    "email": "invalid-email",
+                    "password": "password123"
+                }
+            }
+        ]
+        
+        for test_case in invalid_login_cases:
+            try:
+                response = self.session.post(
+                    f"{self.base_url}/auth/login",
+                    json=test_case["data"],
+                    headers={"Content-Type": "application/json"}
+                )
+                
+                if response.status_code == 401:
+                    self.log_test(f"Login - {test_case['name']}", True, "Correctly rejected invalid credentials")
+                elif response.status_code == 422:
+                    self.log_test(f"Login - {test_case['name']}", True, "Correctly rejected invalid format")
+                else:
+                    self.log_test(f"Login - {test_case['name']}", False, f"Should have failed but got HTTP {response.status_code}", response.text)
+                    all_passed = False
+                    
+            except Exception as e:
+                self.log_test(f"Login - {test_case['name']}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_protected_routes(self):
+        """Test protected routes and role-based access control"""
+        if not self.auth_tokens:
+            self.log_test("Protected Routes Tests", False, "No auth tokens available for testing")
+            return False
+        
+        all_passed = True
+        
+        # Test /api/auth/me endpoint with valid tokens
+        for role, token in self.auth_tokens.items():
+            try:
+                headers = {
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json"
+                }
+                
+                response = self.session.get(f"{self.base_url}/auth/me", headers=headers)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    required_fields = ["id", "username", "email", "role", "name", "created_at", "is_active"]
+                    missing_fields = [field for field in required_fields if field not in data]
+                    
+                    if missing_fields:
+                        self.log_test(f"Protected Route /auth/me - {role}", False, f"Missing response fields: {missing_fields}", data)
+                        all_passed = False
+                    elif data["role"] != role:
+                        self.log_test(f"Protected Route /auth/me - {role}", False, f"Role mismatch: expected {role}, got {data['role']}", data)
+                        all_passed = False
+                    else:
+                        self.log_test(f"Protected Route /auth/me - {role}", True, f"Successfully retrieved user info: {data['email']}")
+                else:
+                    self.log_test(f"Protected Route /auth/me - {role}", False, f"HTTP {response.status_code}", response.text)
+                    all_passed = False
+                    
+            except Exception as e:
+                self.log_test(f"Protected Route /auth/me - {role}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        # Test /api/models-comparison with role-based access
+        role_access_tests = [
+            {"role": "admin", "should_have_access": True},
+            {"role": "financial_analyst", "should_have_access": True},
+            {"role": "employee", "should_have_access": False}
+        ]
+        
+        for test_case in role_access_tests:
+            role = test_case["role"]
+            should_have_access = test_case["should_have_access"]
+            
+            if role not in self.auth_tokens:
+                continue
+                
+            try:
+                headers = {
+                    "Authorization": f"Bearer {self.auth_tokens[role]}",
+                    "Content-Type": "application/json"
+                }
+                
+                response = self.session.get(f"{self.base_url}/models-comparison", headers=headers)
+                
+                if should_have_access:
+                    if response.status_code == 200:
+                        data = response.json()
+                        if isinstance(data, list) and len(data) > 0:
+                            self.log_test(f"Role-based Access /models-comparison - {role}", True, f"Access granted, {len(data)} models returned")
+                        else:
+                            self.log_test(f"Role-based Access /models-comparison - {role}", False, "Access granted but invalid response", data)
+                            all_passed = False
+                    else:
+                        self.log_test(f"Role-based Access /models-comparison - {role}", False, f"Should have access but got HTTP {response.status_code}", response.text)
+                        all_passed = False
+                else:
+                    if response.status_code == 403:
+                        self.log_test(f"Role-based Access /models-comparison - {role}", True, "Access correctly denied")
+                    else:
+                        self.log_test(f"Role-based Access /models-comparison - {role}", False, f"Should be denied but got HTTP {response.status_code}", response.text)
+                        all_passed = False
+                        
+            except Exception as e:
+                self.log_test(f"Role-based Access /models-comparison - {role}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        # Test invalid token scenarios
+        invalid_token_tests = [
+            {"name": "No Authorization Header", "headers": {"Content-Type": "application/json"}},
+            {"name": "Invalid Token Format", "headers": {"Authorization": "Bearer invalid_token", "Content-Type": "application/json"}},
+            {"name": "Malformed Authorization Header", "headers": {"Authorization": "InvalidFormat", "Content-Type": "application/json"}}
+        ]
+        
+        for test_case in invalid_token_tests:
+            try:
+                response = self.session.get(f"{self.base_url}/auth/me", headers=test_case["headers"])
+                
+                if response.status_code == 401:
+                    self.log_test(f"Invalid Token - {test_case['name']}", True, "Correctly rejected invalid token")
+                else:
+                    self.log_test(f"Invalid Token - {test_case['name']}", False, f"Should have failed with 401 but got HTTP {response.status_code}", response.text)
+                    all_passed = False
+                    
+            except Exception as e:
+                self.log_test(f"Invalid Token - {test_case['name']}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
 
     def test_available_options_api(self):
         """Test /api/available-options endpoint"""
