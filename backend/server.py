@@ -135,7 +135,7 @@ class TaskCreate(BaseModel):
     title: str = Field(..., min_length=5, max_length=200)
     description: str = Field(..., min_length=10, max_length=1000)
     assigned_to: str  # employee_id
-    priority: str = Field(..., regex="^(low|medium|high|urgent)$")
+    priority: str = Field(..., pattern="^(low|medium|high|urgent)$")
     due_date: datetime
     status: str = Field(default="pending", regex="^(pending|in_progress|completed|cancelled)$")
 
