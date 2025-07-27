@@ -517,6 +517,15 @@ async def get_available_options():
         ],
         "countries": ["US", "CA", "GB", "DE", "FR", "IN", "AU", "NL", "CH", "ES"],
         "company_sizes": ["S", "M", "L"],
+        "skills": [
+            "Python", "JavaScript", "React", "Node.js", "SQL", "MongoDB", 
+            "Machine Learning", "Deep Learning", "Data Analysis", "Statistics",
+            "AWS", "Docker", "Kubernetes", "Git", "Agile", "Scrum",
+            "TensorFlow", "PyTorch", "Pandas", "NumPy", "Scikit-learn",
+            "Java", "C++", "Go", "Rust", "TypeScript", "Vue.js", "Angular",
+            "PostgreSQL", "MySQL", "Redis", "Elasticsearch", "Apache Spark",
+            "Tableau", "Power BI", "Excel", "R", "Matlab", "SAS"
+        ],
         "experience_level_descriptions": {
             "EN": "Entry-level / Junior",
             "MI": "Mid-level / Intermediate", 
