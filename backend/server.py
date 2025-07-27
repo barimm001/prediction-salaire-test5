@@ -59,6 +59,8 @@ class UserCreate(BaseModel):
     password: str = Field(..., min_length=6)
     role: str = Field(..., pattern="^(admin|employee|financial_analyst)$")
     name: str = Field(..., min_length=3, max_length=100)
+    skills: List[str] = Field(default_factory=list, description="User's skills/competencies")
+    nomEntreprise: str = Field(..., min_length=2, max_length=100, description="Company name")
     
     @validator('username')
     def validate_username(cls, v):
