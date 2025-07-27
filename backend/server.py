@@ -545,6 +545,51 @@ async def get_available_options():
         }
     }
 
+@api_router.post("/skills/add")
+async def add_custom_skill(
+    skill_name: str,
+    current_user: UserResponse = Depends(get_current_active_user)
+):
+    """Add a custom skill to the global skills list"""
+    # Check if skill already exists in the database
+    existing_skill = await db.custom_skills.find_one({"name": skill_name.strip()})
+    if existing_skill:
+        return {"message": "Skill already exists", "skill": skill_name}
+    
+    # Add new skill to database
+    await db.custom_skills.insert_one({
+        "id": str(uuid.uuid4()),
+        "name": skill_name.strip(),
+        "added_by": current_user.id,
+        "created_at": datetime.utcnow()
+    })
+    
+    return {"message": "Skill added successfully", "skill": skill_name}
+
+@api_router.get("/skills/all")
+async def get_all_skills():
+    """Get all available skills including custom ones"""
+    # Default skills
+    default_skills = [
+        "Python", "JavaScript", "React", "Node.js", "SQL", "MongoDB", 
+        "Machine Learning", "Deep Learning", "Data Analysis", "Statistics",
+        "AWS", "Docker", "Kubernetes", "Git", "Agile", "Scrum",
+        "TensorFlow", "PyTorch", "Pandas", "NumPy", "Scikit-learn",
+        "Java", "C++", "Go", "Rust", "TypeScript", "Vue.js", "Angular",
+        "PostgreSQL", "MySQL", "Redis", "Elasticsearch", "Apache Spark",
+        "Tableau", "Power BI", "Excel", "R", "Matlab", "SAS"
+    ]
+    
+    # Get custom skills from database
+    custom_skills = await db.custom_skills.find({}, {"name": 1}).to_list(1000)
+    custom_skill_names = [skill["name"] for skill in custom_skills]
+    
+    # Combine and return unique skills
+    all_skills = list(set(default_skills + custom_skill_names))
+    all_skills.sort()
+    
+    return {"skills": all_skills}
+
 # Employee management endpoints (admin only)
 @api_router.post("/employees", response_model=Employee)
 async def create_employee(
