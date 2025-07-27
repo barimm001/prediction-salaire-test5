@@ -231,12 +231,19 @@ def require_role(allowed_roles: List[str]):
 
 # Initialize sample data and train models (unchanged from before)
 async def initialize_models():
-    """Initialize and train ML models with sample data"""
+    """Initialize and train ML models with sample data including skills"""
     global models_data, encoders, scaler
     
-    # Create sample salary dataset based on the structure
+    # Create sample salary dataset with skills
     np.random.seed(42)  # For reproducible results
-    n_samples = 200
+    n_samples = 300
+    
+    # Define skill categories and their impact on salary
+    skill_categories = {
+        'high_value': ['Machine Learning', 'Deep Learning', 'AWS', 'Kubernetes', 'TensorFlow', 'PyTorch'],
+        'medium_value': ['Python', 'JavaScript', 'React', 'SQL', 'Docker', 'Git'],
+        'standard': ['Excel', 'Agile', 'Scrum', 'PowerBI', 'Tableau']
+    }
     
     sample_data = {
         'work_year': np.random.choice([2023, 2024], n_samples),
@@ -252,9 +259,38 @@ async def initialize_models():
         'remote_ratio': np.random.choice([0, 25, 50, 75, 100], n_samples),
         'company_location': np.random.choice(['US', 'CA', 'GB', 'DE', 'FR', 'IN', 'AU', 'NL', 'CH', 'ES'], n_samples),
         'company_size': np.random.choice(['S', 'M', 'L'], n_samples),
+        'nomEntreprise': np.random.choice(['Google', 'Microsoft', 'Amazon', 'Apple', 'Meta', 'Netflix', 'Tesla', 'OpenAI', 'Startup Inc', 'TechCorp'], n_samples)
     }
     
-    # Generate realistic salaries based on features
+    # Generate skills for each sample (1-5 skills per person)
+    all_skills = []
+    skill_counts = {'high_value': [], 'medium_value': [], 'standard': []}
+    
+    for i in range(n_samples):
+        num_skills = np.random.randint(1, 6)  # 1-5 skills
+        
+        # Weight skill selection based on job title and experience
+        if sample_data['job_title'][i] in ['Data Scientist', 'Machine Learning Engineer', 'AI Engineer']:
+            skills_pool = skill_categories['high_value'] + skill_categories['medium_value'][:3]
+        elif sample_data['job_title'][i] in ['Software Engineer', 'Backend Developer', 'Full Stack Developer']:
+            skills_pool = skill_categories['medium_value'] + skill_categories['high_value'][:2]
+        else:
+            skills_pool = skill_categories['standard'] + skill_categories['medium_value'][:2]
+        
+        person_skills = np.random.choice(skills_pool, min(num_skills, len(skills_pool)), replace=False)
+        all_skills.append(list(person_skills))
+        
+        # Count skill categories for salary calculation
+        for category, skills_list in skill_categories.items():
+            count = sum(1 for skill in person_skills if skill in skills_list)
+            skill_counts[category].append(count)
+    
+    sample_data['skills'] = all_skills
+    sample_data['high_value_skills'] = skill_counts['high_value']
+    sample_data['medium_value_skills'] = skill_counts['medium_value']
+    sample_data['standard_skills'] = skill_counts['standard']
+    
+    # Generate realistic salaries based on features including skills
     salaries = []
     for i in range(n_samples):
         base_salary = 70000
@@ -283,6 +319,19 @@ async def initialize_models():
         }
         base_salary *= location_multiplier[sample_data['company_location'][i]]
         
+        # Skills impact on salary
+        skill_bonus = (sample_data['high_value_skills'][i] * 0.15 + 
+                      sample_data['medium_value_skills'][i] * 0.08 + 
+                      sample_data['standard_skills'][i] * 0.03)
+        base_salary *= (1 + skill_bonus)
+        
+        # Company name adjustments (FAANG premium)
+        company_multiplier = {
+            'Google': 1.3, 'Microsoft': 1.25, 'Amazon': 1.2, 'Apple': 1.3, 'Meta': 1.25,
+            'Netflix': 1.2, 'Tesla': 1.15, 'OpenAI': 1.4, 'Startup Inc': 0.85, 'TechCorp': 1.0
+        }
+        base_salary *= company_multiplier[sample_data['nomEntreprise'][i]]
+        
         # Add some randomness
         base_salary *= np.random.normal(1.0, 0.1)
         salaries.append(max(30000, int(base_salary)))
@@ -292,9 +341,9 @@ async def initialize_models():
     # Create DataFrame
     df = pd.DataFrame(sample_data)
     
-    # Prepare features for training
+    # Prepare features for training (including skills features)
     categorical_columns = ['experience_level', 'employment_type', 'job_title', 
-                          'employee_residence', 'company_location', 'company_size']
+                          'employee_residence', 'company_location', 'company_size', 'nomEntreprise']
     
     # Initialize encoders
     encoders = {}
@@ -302,8 +351,9 @@ async def initialize_models():
         encoders[col] = LabelEncoder()
         df[col + '_encoded'] = encoders[col].fit_transform(df[col])
     
-    # Prepare feature matrix
-    feature_columns = ['work_year', 'remote_ratio'] + [col + '_encoded' for col in categorical_columns]
+    # Prepare feature matrix (including skills counts)
+    feature_columns = (['work_year', 'remote_ratio', 'high_value_skills', 'medium_value_skills', 'standard_skills'] + 
+                      [col + '_encoded' for col in categorical_columns])
     X = df[feature_columns]
     y = df['salary_in_usd']
     
@@ -354,7 +404,12 @@ async def initialize_models():
             'feature_columns': feature_columns
         }
     
-    print("Models initialized and trained successfully!")
+    print("Models initialized and trained successfully with skills integration!")
+    
+    # Store sample data for analytics
+    await db.salary_data.delete_many({})  # Clear existing data
+    df_dict = df.to_dict('records')
+    await db.salary_data.insert_many(df_dict)
 
 # Authentication Routes
 @api_router.post("/auth/register", response_model=UserResponse)
