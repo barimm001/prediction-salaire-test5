@@ -660,7 +660,9 @@ class BackendTester:
                     "employee_residence": "US",
                     "remote_ratio": 0,
                     "company_location": "US",
-                    "company_size": "L"
+                    "company_size": "L",
+                    "skills": ["Python", "SQL"],
+                    "nomEntreprise": "TechCorp"
                 },
                 "should_fail": False  # Should handle gracefully
             },
@@ -674,7 +676,9 @@ class BackendTester:
                     "employee_residence": "US",
                     "remote_ratio": 0,
                     "company_location": "US",
-                    "company_size": "L"
+                    "company_size": "L",
+                    "skills": ["Python"],
+                    "nomEntreprise": "TechCorp"
                 },
                 "should_fail": True
             },
@@ -688,7 +692,9 @@ class BackendTester:
                     "employee_residence": "US",
                     "remote_ratio": 0,
                     "company_location": "US",
-                    "company_size": "L"
+                    "company_size": "L",
+                    "skills": ["Python"],
+                    "nomEntreprise": "TechCorp"
                 },
                 "should_fail": True
             },
@@ -702,7 +708,9 @@ class BackendTester:
                     "employee_residence": "US",
                     "remote_ratio": 0,
                     "company_location": "US",
-                    "company_size": "L"
+                    "company_size": "L",
+                    "skills": ["Quantum Computing", "Physics"],
+                    "nomEntreprise": "IBM"
                 },
                 "should_fail": False  # Should handle gracefully
             }
