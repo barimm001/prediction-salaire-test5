@@ -951,6 +951,328 @@ const ComparisonTab = () => {
   );
 };
 
+// Advanced Analytics Tab (Financial Analyst only)
+const AnalyticsTab = () => {
+  const [analyticsData, setAnalyticsData] = useState({
+    salaryTrends: [],
+    companySummaries: [],
+    correlationMatrix: [],
+    topRankings: {},
+    annualSummaries: [],
+    salaryDistribution: {}
+  });
+  const [loading, setLoading] = useState(true);
+  const [activeChart, setActiveChart] = useState('trends');
+
+  useEffect(() => {
+    fetchAllAnalytics();
+  }, []);
+
+  const fetchAllAnalytics = async () => {
+    try {
+      setLoading(true);
+      
+      const [trendsRes, summariesRes, correlationRes, rankingsRes, annualRes, distributionRes] = 
+        await Promise.all([
+          axios.get(`${API}/analytics/salary-trends`),
+          axios.get(`${API}/analytics/company-summaries`),
+          axios.get(`${API}/analytics/correlation-heatmap`),
+          axios.get(`${API}/analytics/top-rankings`),
+          axios.get(`${API}/analytics/annual-summary`),
+          axios.get(`${API}/analytics/salary-distribution`)
+        ]);
+
+      setAnalyticsData({
+        salaryTrends: trendsRes.data.trends || [],
+        companySummaries: summariesRes.data.summaries || [],
+        correlationMatrix: correlationRes.data.correlation_matrix || [],
+        topRankings: rankingsRes.data,
+        annualSummaries: annualRes.data.annual_summaries || [],
+        salaryDistribution: distributionRes.data
+      });
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C80'];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-xl text-gray-600">Loading advanced analytics...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Navigation Pills */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+          <span className="mr-3">📈</span>
+          Advanced Financial Analytics
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: 'trends', label: 'Salary Trends', icon: '📈' },
+            { key: 'companies', label: 'Company Analysis', icon: '🏢' },
+            { key: 'correlations', label: 'Correlations', icon: '🔗' },
+            { key: 'rankings', label: 'Top Rankings', icon: '🏆' },
+            { key: 'annual', label: 'Annual Summary', icon: '📅' },
+            { key: 'distribution', label: 'Salary Distribution', icon: '📊' }
+          ].map(chart => (
+            <button
+              key={chart.key}
+              onClick={() => setActiveChart(chart.key)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
+                activeChart === chart.key 
+                  ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                  : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+              }`}
+            >
+              <span>{chart.icon}</span>
+              <span className="font-medium">{chart.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Salary Trends Chart */}
+      {activeChart === 'trends' && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">📈 Salary Trends by Job & Company</h3>
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={analyticsData.salaryTrends.slice(0, 20)}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="job_title" 
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={100}
+                  fontSize={12}
+                />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value) => [`$${value.toLocaleString()}`, 'Average Salary']}
+                  labelFormatter={(label) => `Job: ${label}`}
+                />
+                <Bar dataKey="avg_salary" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Company Analysis */}
+      {activeChart === 'companies' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">🏢 Total Salary Cost by Company</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analyticsData.companySummaries.slice(0, 10)}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="company" angle={-45} textAnchor="end" height={80} />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Total Cost']} />
+                  <Bar dataKey="total_salary_cost" fill="#00C49F" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">💰 Average Salary by Company</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analyticsData.companySummaries.slice(0, 10)}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="company" angle={-45} textAnchor="end" height={80} />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Average Salary']} />
+                  <Bar dataKey="avg_salary" fill="#FFBB28" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Top Rankings */}
+      {activeChart === 'rankings' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Top Jobs */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">🏆 Top Paying Jobs</h3>
+            <div className="space-y-3">
+              {analyticsData.topRankings.top_jobs?.slice(0, 8).map((job, index) => (
+                <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <div>
+                    <div className="font-medium text-sm">{job.job_title}</div>
+                    <div className="text-xs text-gray-500">{job.count} positions</div>
+                  </div>
+                  <div className="text-green-600 font-bold">${job.avg_salary.toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Companies */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">🏢 Top Paying Companies</h3>
+            <div className="space-y-3">
+              {analyticsData.topRankings.top_companies?.slice(0, 8).map((company, index) => (
+                <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <div>
+                    <div className="font-medium text-sm">{company.company}</div>
+                    <div className="text-xs text-gray-500">{company.count} employees</div>
+                  </div>
+                  <div className="text-blue-600 font-bold">${company.avg_salary.toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Skills */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">🔥 Most Demanded Skills</h3>
+            <div className="space-y-3">
+              {analyticsData.topRankings.top_skills?.slice(0, 8).map((skill, index) => (
+                <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <div>
+                    <div className="font-medium text-sm">{skill.skill}</div>
+                    <div className="text-xs text-gray-500">{skill.count} mentions</div>
+                  </div>
+                  <div className="text-purple-600 font-bold">${skill.avg_salary.toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Annual Summary */}
+      {activeChart === 'annual' && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">📅 Annual Summary & Growth</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="h-80">
+              <h4 className="text-lg font-medium mb-2">Recruitment Trends</h4>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analyticsData.annualSummaries}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="year" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="total_recruitments" stroke="#8884d8" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="h-80">
+              <h4 className="text-lg font-medium mb-2">Salary Evolution</h4>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analyticsData.annualSummaries}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="year" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Average Salary']} />
+                  <Line type="monotone" dataKey="avg_salary" stroke="#00C49F" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Salary Distribution */}
+      {activeChart === 'distribution' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">📊 Salary Distribution by Company Size</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analyticsData.salaryDistribution.distribution_by_company_size}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="category" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [`$${value.toLocaleString()}`]} />
+                  <Bar dataKey="mean" fill="#FF8042" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">💼 Salary Distribution by Experience</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analyticsData.salaryDistribution.distribution_by_experience}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="category" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [`$${value.toLocaleString()}`]} />
+                  <Bar dataKey="mean" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-6 lg:col-span-2">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">📈 Overall Salary Histogram</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analyticsData.salaryDistribution.salary_histogram}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="range_label" angle={-45} textAnchor="end" height={80} />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [value, 'Number of Employees']} />
+                  <Bar dataKey="count" fill="#00C49F" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+          <div className="text-3xl font-bold text-blue-600">
+            {analyticsData.companySummaries.reduce((sum, c) => sum + c.total_employees, 0)}
+          </div>
+          <div className="text-gray-600">Total Employees</div>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+          <div className="text-3xl font-bold text-green-600">
+            ${analyticsData.companySummaries.reduce((sum, c) => sum + c.total_salary_cost, 0).toLocaleString()}
+          </div>
+          <div className="text-gray-600">Total Salary Cost</div>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+          <div className="text-3xl font-bold text-purple-600">
+            {analyticsData.companySummaries.length}
+          </div>
+          <div className="text-gray-600">Companies</div>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-lg p-6 text-center">
+          <div className="text-3xl font-bold text-red-600">
+            ${Math.round(analyticsData.companySummaries.reduce((sum, c) => sum + c.avg_salary, 0) / Math.max(analyticsData.companySummaries.length, 1)).toLocaleString()}
+          </div>
+          <div className="text-gray-600">Average Salary</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Employee Management Tab (Admin only)
 const EmployeeManagementTab = () => {
   return (
