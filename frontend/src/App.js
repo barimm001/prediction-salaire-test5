@@ -526,15 +526,32 @@ const PredictionTab = () => {
     employee_residence: '',
     remote_ratio: 0,
     company_location: '',
-    company_size: ''
+    company_size: '',
+    skills: [],
+    nomEntreprise: ''
   });
   const [options, setOptions] = useState({});
+  const [availableSkills, setAvailableSkills] = useState([]);
   const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchOptions();
+    fetchSkills();
   }, []);
+
+  const fetchSkills = async () => {
+    try {
+      const response = await axios.get(`${API}/skills/all`);
+      const skillOptions = response.data.skills.map(skill => ({
+        value: skill,
+        label: skill
+      }));
+      setAvailableSkills(skillOptions);
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+    }
+  };
 
   const fetchOptions = async () => {
     try {
