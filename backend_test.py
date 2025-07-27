@@ -1163,6 +1163,21 @@ class BackendTester:
         # Test 6: Edge Cases
         edge_cases_result = self.test_edge_cases()
         
+        print("\n🔧 NEW FEATURES TESTING")
+        print("-" * 40)
+        
+        # Test 7: Skills Management System
+        skills_result = self.test_skills_management_system()
+        
+        # Test 8: Enhanced Salary Prediction with Skills
+        enhanced_prediction_result = self.test_enhanced_salary_prediction_with_skills()
+        
+        # Test 9: Advanced Analytics Endpoints
+        analytics_result = self.test_advanced_analytics_endpoints()
+        
+        # Test 10: Role-based Analytics Access Control
+        analytics_access_result = self.test_role_based_analytics_access()
+        
         # Summary
         print("=" * 80)
         print("TEST SUMMARY")
