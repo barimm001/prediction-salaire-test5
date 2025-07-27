@@ -736,6 +736,392 @@ class BackendTester:
         
         return all_passed
 
+    def test_skills_management_system(self):
+        """Test skills management endpoints"""
+        all_passed = True
+        
+        # Test 1: Get all available skills
+        try:
+            response = self.session.get(f"{self.base_url}/skills/all")
+            if response.status_code == 200:
+                data = response.json()
+                if "skills" in data and isinstance(data["skills"], list):
+                    default_skills_count = len(data["skills"])
+                    self.log_test("Skills Management - Get All Skills", True, f"Retrieved {default_skills_count} skills successfully")
+                else:
+                    self.log_test("Skills Management - Get All Skills", False, "Invalid response format", data)
+                    all_passed = False
+            else:
+                self.log_test("Skills Management - Get All Skills", False, f"HTTP {response.status_code}", response.text)
+                all_passed = False
+        except Exception as e:
+            self.log_test("Skills Management - Get All Skills", False, f"Error: {str(e)}")
+            all_passed = False
+        
+        # Test 2: Add custom skill (requires authentication)
+        if "admin" in self.auth_tokens:
+            headers = {
+                "Authorization": f"Bearer {self.auth_tokens['admin']}",
+                "Content-Type": "application/json"
+            }
+            
+            custom_skill = f"Custom_Skill_{uuid.uuid4().hex[:8]}"
+            
+            try:
+                response = self.session.post(
+                    f"{self.base_url}/skills/add",
+                    params={"skill_name": custom_skill},
+                    headers=headers
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if "message" in data and "skill" in data:
+                        self.log_test("Skills Management - Add Custom Skill", True, f"Added custom skill: {custom_skill}")
+                        
+                        # Verify the skill was added by getting all skills again
+                        response = self.session.get(f"{self.base_url}/skills/all")
+                        if response.status_code == 200:
+                            updated_data = response.json()
+                            if custom_skill in updated_data.get("skills", []):
+                                self.log_test("Skills Management - Verify Custom Skill Added", True, f"Custom skill {custom_skill} found in skills list")
+                            else:
+                                self.log_test("Skills Management - Verify Custom Skill Added", False, f"Custom skill {custom_skill} not found in updated skills list")
+                                all_passed = False
+                    else:
+                        self.log_test("Skills Management - Add Custom Skill", False, "Invalid response format", data)
+                        all_passed = False
+                else:
+                    self.log_test("Skills Management - Add Custom Skill", False, f"HTTP {response.status_code}", response.text)
+                    all_passed = False
+            except Exception as e:
+                self.log_test("Skills Management - Add Custom Skill", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_enhanced_salary_prediction_with_skills(self):
+        """Test enhanced salary prediction with skills and nomEntreprise"""
+        if "admin" not in self.auth_tokens:
+            self.log_test("Enhanced Salary Prediction Tests", False, "No admin token available")
+            return False
+        
+        headers = {
+            "Authorization": f"Bearer {self.auth_tokens['admin']}",
+            "Content-Type": "application/json"
+        }
+        
+        test_cases = [
+            {
+                "name": "High-Value Skills Impact (ML Engineer with ML skills)",
+                "data": {
+                    "work_year": 2024,
+                    "experience_level": "SE",
+                    "employment_type": "FT",
+                    "job_title": "Machine Learning Engineer",
+                    "employee_residence": "US",
+                    "remote_ratio": 0,
+                    "company_location": "US",
+                    "company_size": "L",
+                    "skills": ["Machine Learning", "Deep Learning", "TensorFlow", "Python", "AWS"],
+                    "nomEntreprise": "Google"
+                },
+                "expected_salary_range": (180000, 280000)
+            },
+            {
+                "name": "Standard Skills Impact (Data Analyst with basic skills)",
+                "data": {
+                    "work_year": 2024,
+                    "experience_level": "MI",
+                    "employment_type": "FT",
+                    "job_title": "Data Analyst",
+                    "employee_residence": "US",
+                    "remote_ratio": 50,
+                    "company_location": "US",
+                    "company_size": "M",
+                    "skills": ["Excel", "PowerBI", "SQL"],
+                    "nomEntreprise": "TechCorp"
+                },
+                "expected_salary_range": (70000, 120000)
+            },
+            {
+                "name": "FAANG Company Premium (Software Engineer at Meta)",
+                "data": {
+                    "work_year": 2024,
+                    "experience_level": "SE",
+                    "employment_type": "FT",
+                    "job_title": "Software Engineer",
+                    "employee_residence": "US",
+                    "remote_ratio": 25,
+                    "company_location": "US",
+                    "company_size": "L",
+                    "skills": ["JavaScript", "React", "Node.js", "Python"],
+                    "nomEntreprise": "Meta"
+                },
+                "expected_salary_range": (160000, 240000)
+            },
+            {
+                "name": "Skills vs No Skills Comparison (same profile, no skills)",
+                "data": {
+                    "work_year": 2024,
+                    "experience_level": "MI",
+                    "employment_type": "FT",
+                    "job_title": "Data Scientist",
+                    "employee_residence": "US",
+                    "remote_ratio": 0,
+                    "company_location": "US",
+                    "company_size": "M",
+                    "skills": [],  # No skills
+                    "nomEntreprise": "Startup Inc"
+                },
+                "expected_salary_range": (80000, 140000)
+            }
+        ]
+        
+        all_passed = True
+        predictions = []
+        
+        for test_case in test_cases:
+            try:
+                response = self.session.post(
+                    f"{self.base_url}/predict-salary",
+                    json=test_case["data"],
+                    headers=headers
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    # Check required response fields
+                    required_fields = ["predicted_salary_usd", "model_name", "confidence_score", "input_data"]
+                    missing_fields = [field for field in required_fields if field not in data]
+                    
+                    if missing_fields:
+                        self.log_test(f"Enhanced Prediction - {test_case['name']}", False, f"Missing response fields: {missing_fields}", data)
+                        all_passed = False
+                        continue
+                    
+                    predicted_salary = data["predicted_salary_usd"]
+                    model_name = data["model_name"]
+                    confidence = data["confidence_score"]
+                    
+                    # Verify skills and nomEntreprise are in input_data
+                    input_data = data["input_data"]
+                    if "skills" not in input_data or "nomEntreprise" not in input_data:
+                        self.log_test(f"Enhanced Prediction - {test_case['name']}", False, "Skills or nomEntreprise missing from input_data", data)
+                        all_passed = False
+                        continue
+                    
+                    # Validate salary range
+                    min_salary, max_salary = test_case["expected_salary_range"]
+                    salary_in_range = min_salary <= predicted_salary <= max_salary
+                    
+                    # Store prediction for comparison
+                    predictions.append({
+                        "name": test_case["name"],
+                        "salary": predicted_salary,
+                        "skills_count": len(test_case["data"]["skills"]),
+                        "company": test_case["data"]["nomEntreprise"]
+                    })
+                    
+                    if salary_in_range:
+                        self.log_test(
+                            f"Enhanced Prediction - {test_case['name']}", 
+                            True, 
+                            f"Predicted: ${predicted_salary:,.2f}, Skills: {len(test_case['data']['skills'])}, Company: {test_case['data']['nomEntreprise']}, Model: {model_name}"
+                        )
+                    else:
+                        self.log_test(
+                            f"Enhanced Prediction - {test_case['name']}", 
+                            False, 
+                            f"Salary ${predicted_salary:,.2f} outside expected range ${min_salary:,}-${max_salary:,}",
+                            data
+                        )
+                        all_passed = False
+                else:
+                    self.log_test(f"Enhanced Prediction - {test_case['name']}", False, f"HTTP {response.status_code}", response.text)
+                    all_passed = False
+                    
+            except Exception as e:
+                self.log_test(f"Enhanced Prediction - {test_case['name']}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        # Verify skills impact: High-value skills should result in higher salaries
+        if len(predictions) >= 2:
+            high_skill_pred = next((p for p in predictions if "High-Value Skills" in p["name"]), None)
+            standard_skill_pred = next((p for p in predictions if "Standard Skills" in p["name"]), None)
+            
+            if high_skill_pred and standard_skill_pred:
+                if high_skill_pred["salary"] > standard_skill_pred["salary"]:
+                    self.log_test("Skills Impact Verification", True, f"High-value skills resulted in higher salary: ${high_skill_pred['salary']:,.2f} vs ${standard_skill_pred['salary']:,.2f}")
+                else:
+                    self.log_test("Skills Impact Verification", False, f"High-value skills did not result in higher salary: ${high_skill_pred['salary']:,.2f} vs ${standard_skill_pred['salary']:,.2f}")
+                    all_passed = False
+        
+        return all_passed
+
+    def test_advanced_analytics_endpoints(self):
+        """Test all 6 analytics endpoints for financial analysts"""
+        if "financial_analyst" not in self.auth_tokens:
+            self.log_test("Analytics Endpoints Tests", False, "No financial_analyst token available")
+            return False
+        
+        headers = {
+            "Authorization": f"Bearer {self.auth_tokens['financial_analyst']}",
+            "Content-Type": "application/json"
+        }
+        
+        analytics_endpoints = [
+            {
+                "endpoint": "/analytics/salary-trends",
+                "name": "Salary Trends",
+                "expected_fields": ["trends"]
+            },
+            {
+                "endpoint": "/analytics/company-summaries", 
+                "name": "Company Summaries",
+                "expected_fields": ["summaries"]
+            },
+            {
+                "endpoint": "/analytics/correlation-heatmap",
+                "name": "Correlation Heatmap",
+                "expected_fields": ["correlation_matrix", "variables"]
+            },
+            {
+                "endpoint": "/analytics/top-rankings",
+                "name": "Top Rankings",
+                "expected_fields": ["top_jobs", "top_companies", "top_skills"]
+            },
+            {
+                "endpoint": "/analytics/annual-summary",
+                "name": "Annual Summary", 
+                "expected_fields": ["annual_summaries"]
+            },
+            {
+                "endpoint": "/analytics/salary-distribution",
+                "name": "Salary Distribution",
+                "expected_fields": ["distribution_by_company_size", "distribution_by_experience", "salary_histogram"]
+            }
+        ]
+        
+        all_passed = True
+        
+        for endpoint_test in analytics_endpoints:
+            try:
+                response = self.session.get(f"{self.base_url}{endpoint_test['endpoint']}", headers=headers)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    # Check for expected fields
+                    missing_fields = [field for field in endpoint_test["expected_fields"] if field not in data]
+                    
+                    if missing_fields:
+                        self.log_test(f"Analytics - {endpoint_test['name']}", False, f"Missing fields: {missing_fields}", data)
+                        all_passed = False
+                    else:
+                        # Validate data structure based on endpoint
+                        if endpoint_test["endpoint"] == "/analytics/salary-trends":
+                            trends = data.get("trends", [])
+                            if isinstance(trends, list) and len(trends) > 0:
+                                sample_trend = trends[0]
+                                required_trend_fields = ["job_title", "company", "avg_salary", "count"]
+                                if all(field in sample_trend for field in required_trend_fields):
+                                    self.log_test(f"Analytics - {endpoint_test['name']}", True, f"Retrieved {len(trends)} salary trends")
+                                else:
+                                    self.log_test(f"Analytics - {endpoint_test['name']}", False, f"Invalid trend structure: {sample_trend}")
+                                    all_passed = False
+                            else:
+                                self.log_test(f"Analytics - {endpoint_test['name']}", False, "No trends data returned")
+                                all_passed = False
+                        
+                        elif endpoint_test["endpoint"] == "/analytics/company-summaries":
+                            summaries = data.get("summaries", [])
+                            if isinstance(summaries, list) and len(summaries) > 0:
+                                sample_summary = summaries[0]
+                                required_summary_fields = ["company", "total_employees", "total_salary_cost", "avg_salary", "monthly_cost", "annual_cost"]
+                                if all(field in sample_summary for field in required_summary_fields):
+                                    self.log_test(f"Analytics - {endpoint_test['name']}", True, f"Retrieved {len(summaries)} company summaries")
+                                else:
+                                    self.log_test(f"Analytics - {endpoint_test['name']}", False, f"Invalid summary structure: {sample_summary}")
+                                    all_passed = False
+                            else:
+                                self.log_test(f"Analytics - {endpoint_test['name']}", False, "No summaries data returned")
+                                all_passed = False
+                        
+                        elif endpoint_test["endpoint"] == "/analytics/top-rankings":
+                            rankings = data
+                            required_ranking_fields = ["top_jobs", "top_companies", "top_skills"]
+                            if all(field in rankings and isinstance(rankings[field], list) for field in required_ranking_fields):
+                                jobs_count = len(rankings["top_jobs"])
+                                companies_count = len(rankings["top_companies"])
+                                skills_count = len(rankings["top_skills"])
+                                self.log_test(f"Analytics - {endpoint_test['name']}", True, f"Retrieved rankings - Jobs: {jobs_count}, Companies: {companies_count}, Skills: {skills_count}")
+                            else:
+                                self.log_test(f"Analytics - {endpoint_test['name']}", False, "Invalid rankings structure", rankings)
+                                all_passed = False
+                        
+                        else:
+                            # For other endpoints, just check that expected fields exist and contain data
+                            data_count = sum(1 for field in endpoint_test["expected_fields"] if data.get(field))
+                            self.log_test(f"Analytics - {endpoint_test['name']}", True, f"Retrieved data with {data_count}/{len(endpoint_test['expected_fields'])} expected fields")
+                
+                else:
+                    self.log_test(f"Analytics - {endpoint_test['name']}", False, f"HTTP {response.status_code}", response.text)
+                    all_passed = False
+                    
+            except Exception as e:
+                self.log_test(f"Analytics - {endpoint_test['name']}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
+    def test_role_based_analytics_access(self):
+        """Test role-based access control for analytics endpoints"""
+        analytics_endpoint = "/analytics/salary-trends"
+        all_passed = True
+        
+        # Test access for different roles
+        role_tests = [
+            {"role": "financial_analyst", "should_have_access": True},
+            {"role": "admin", "should_have_access": True},
+            {"role": "employee", "should_have_access": False}
+        ]
+        
+        for test_case in role_tests:
+            role = test_case["role"]
+            should_have_access = test_case["should_have_access"]
+            
+            if role not in self.auth_tokens:
+                continue
+            
+            headers = {
+                "Authorization": f"Bearer {self.auth_tokens[role]}",
+                "Content-Type": "application/json"
+            }
+            
+            try:
+                response = self.session.get(f"{self.base_url}{analytics_endpoint}", headers=headers)
+                
+                if should_have_access:
+                    if response.status_code == 200:
+                        self.log_test(f"Analytics Access Control - {role}", True, "Access granted correctly")
+                    else:
+                        self.log_test(f"Analytics Access Control - {role}", False, f"Should have access but got HTTP {response.status_code}", response.text)
+                        all_passed = False
+                else:
+                    if response.status_code == 403:
+                        self.log_test(f"Analytics Access Control - {role}", True, "Access correctly denied")
+                    else:
+                        self.log_test(f"Analytics Access Control - {role}", False, f"Should be denied but got HTTP {response.status_code}", response.text)
+                        all_passed = False
+                        
+            except Exception as e:
+                self.log_test(f"Analytics Access Control - {role}", False, f"Error: {str(e)}")
+                all_passed = False
+        
+        return all_passed
+
     def run_all_tests(self):
         """Run all backend tests"""
         print("=" * 80)
