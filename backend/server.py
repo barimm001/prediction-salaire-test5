@@ -78,6 +78,8 @@ class UserResponse(BaseModel):
     email: str
     role: str
     name: str
+    skills: List[str] = Field(default_factory=list)
+    nomEntreprise: str
     created_at: datetime
     is_active: bool = True
 
