@@ -91,7 +91,7 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     email: Optional[str] = None
 
-# ML Models (unchanged)
+# ML Models
 class SalaryPredictionInput(BaseModel):
     work_year: int = Field(..., ge=2020, le=2025, description="Year of work")
     experience_level: str = Field(..., description="EN, MI, SE, EX")
@@ -101,6 +101,8 @@ class SalaryPredictionInput(BaseModel):
     remote_ratio: int = Field(..., ge=0, le=100, description="Remote work percentage")
     company_location: str = Field(..., description="Country code") 
     company_size: str = Field(..., description="S, M, L")
+    skills: List[str] = Field(default_factory=list, description="User's skills")
+    nomEntreprise: str = Field(..., min_length=2, max_length=100, description="Company name")
 
 class SalaryPredictionResponse(BaseModel):
     predicted_salary_usd: float
