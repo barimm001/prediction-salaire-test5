@@ -309,8 +309,13 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Frontend Authentication UI"
-    - "Financial Analyst Dashboard"
+    - "Skills Management System"
+    - "Company Name Integration (nomEntreprise)"
+    - "Enhanced ML Models with Skills"
+    - "Advanced Analytics API Endpoints"
+    - "Enhanced Frontend Registration with Skills"
+    - "Enhanced Prediction Form with Skills"
+    - "Advanced Financial Analytics Dashboard"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
