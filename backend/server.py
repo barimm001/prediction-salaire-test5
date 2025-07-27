@@ -492,7 +492,7 @@ async def predict_salary(
     input_data: SalaryPredictionInput,
     current_user: UserResponse = Depends(get_current_active_user)
 ):
-    """Predict salary using the best performing model (accessible to all authenticated users)"""
+    """Predict salary using the best performing model with skills integration"""
     if not models_data:
         raise HTTPException(status_code=500, detail="Models not initialized")
     
@@ -504,11 +504,23 @@ async def predict_salary(
         # Prepare input for prediction
         input_dict = input_data.dict()
         
+        # Calculate skills features
+        skill_categories = {
+            'high_value': ['Machine Learning', 'Deep Learning', 'AWS', 'Kubernetes', 'TensorFlow', 'PyTorch'],
+            'medium_value': ['Python', 'JavaScript', 'React', 'SQL', 'Docker', 'Git'],
+            'standard': ['Excel', 'Agile', 'Scrum', 'PowerBI', 'Tableau']
+        }
+        
+        high_value_count = sum(1 for skill in input_dict['skills'] if skill in skill_categories['high_value'])
+        medium_value_count = sum(1 for skill in input_dict['skills'] if skill in skill_categories['medium_value'])
+        standard_count = sum(1 for skill in input_dict['skills'] if skill in skill_categories['standard'])
+        
         # Encode categorical features
         categorical_columns = ['experience_level', 'employment_type', 'job_title', 
-                              'employee_residence', 'company_location', 'company_size']
+                              'employee_residence', 'company_location', 'company_size', 'nomEntreprise']
         
-        feature_values = [input_dict['work_year'], input_dict['remote_ratio']]
+        feature_values = [input_dict['work_year'], input_dict['remote_ratio'], 
+                         high_value_count, medium_value_count, standard_count]
         
         for col in categorical_columns:
             value = input_dict[col]
