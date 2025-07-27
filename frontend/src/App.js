@@ -214,7 +214,46 @@ const AuthPage = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [availableSkills, setAvailableSkills] = useState([]);
+  const [customSkill, setCustomSkill] = useState('');
   const { login, register } = useAuth();
+
+  useEffect(() => {
+    if (!isLogin) {
+      fetchSkills();
+    }
+  }, [isLogin]);
+
+  const fetchSkills = async () => {
+    try {
+      const response = await axios.get(`${API}/skills/all`);
+      const skillOptions = response.data.skills.map(skill => ({
+        value: skill,
+        label: skill
+      }));
+      setAvailableSkills(skillOptions);
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+    }
+  };
+
+  const addCustomSkill = async () => {
+    if (!customSkill.trim()) return;
+    
+    try {
+      await axios.post(`${API}/skills/add`, null, {
+        params: { skill_name: customSkill.trim() }
+      });
+      
+      // Add to current selection
+      const newSkill = { value: customSkill.trim(), label: customSkill.trim() };
+      setAvailableSkills(prev => [...prev, newSkill]);
+      setFormData(prev => ({ ...prev, skills: [...prev.skills, customSkill.trim()] }));
+      setCustomSkill('');
+    } catch (error) {
+      console.error('Error adding custom skill:', error);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
