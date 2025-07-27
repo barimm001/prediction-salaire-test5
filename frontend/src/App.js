@@ -160,6 +160,14 @@ function AppContent() {
                   icon="📊"
                 />
               )}
+              {user.role === 'financial_analyst' && (
+                <TabButton 
+                  active={activeTab === 'analytics'} 
+                  onClick={() => setActiveTab('analytics')}
+                  text="Advanced Analytics"
+                  icon="📈"
+                />
+              )}
               {user.role === 'admin' && (
                 <TabButton 
                   active={activeTab === 'employees'} 
