@@ -200,6 +200,7 @@ function AppContent() {
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {activeTab === 'predict' && <PredictionTab />}
         {activeTab === 'compare' && (user.role === 'admin' || user.role === 'financial_analyst') && <ComparisonTab />}
+        {activeTab === 'analytics' && user.role === 'financial_analyst' && <AnalyticsTab />}
         {activeTab === 'employees' && user.role === 'admin' && <EmployeeManagementTab />}
         {activeTab === 'tasks' && <TasksTab />}
         {activeTab === 'meetings' && user.role === 'admin' && <MeetingsTab />}
