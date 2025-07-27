@@ -1,5 +1,10 @@
 import React, { useState, useEffect, createContext, useContext } from "react";
 import axios from "axios";
+import Select from "react-select";
+import { 
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  LineChart, Line, PieChart, Pie, Cell, ScatterChart, Scatter
+} from "recharts";
 import "./App.css";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
