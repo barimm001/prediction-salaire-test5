@@ -299,7 +299,9 @@ const AuthPage = () => {
             password: '',
             username: '',
             name: '',
-            role: 'employee'
+            role: 'employee',
+            skills: [],
+            nomEntreprise: ''
           });
           alert('Registration successful! Please login.');
           setLoading(false);
