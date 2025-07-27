@@ -378,6 +378,8 @@ async def register_user(user_data: UserCreate):
         "email": user_data.email,
         "name": user_data.name,
         "role": user_data.role,
+        "skills": user_data.skills,
+        "nomEntreprise": user_data.nomEntreprise,
         "hashed_password": hashed_password,
         "is_active": True,
         "created_at": datetime.utcnow()
