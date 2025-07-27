@@ -539,9 +539,11 @@ class BackendTester:
                     "employee_residence": "US",
                     "remote_ratio": 0,
                     "company_location": "US",
-                    "company_size": "L"
+                    "company_size": "L",
+                    "skills": ["Python", "Machine Learning", "SQL", "Statistics"],
+                    "nomEntreprise": "Google"
                 },
-                "expected_salary_range": (120000, 200000)
+                "expected_salary_range": (120000, 300000)
             },
             {
                 "name": "Entry-level Software Engineer, IN, Small Company, Remote",
@@ -553,9 +555,11 @@ class BackendTester:
                     "employee_residence": "IN",
                     "remote_ratio": 100,
                     "company_location": "IN",
-                    "company_size": "S"
+                    "company_size": "S",
+                    "skills": ["JavaScript", "React", "Node.js"],
+                    "nomEntreprise": "TechCorp"
                 },
-                "expected_salary_range": (25000, 60000)
+                "expected_salary_range": (25000, 80000)
             },
             {
                 "name": "Executive Product Manager, CH, Medium Company, Hybrid",
@@ -567,9 +571,11 @@ class BackendTester:
                     "employee_residence": "CH",
                     "remote_ratio": 50,
                     "company_location": "CH",
-                    "company_size": "M"
+                    "company_size": "M",
+                    "skills": ["Leadership", "Strategy", "Analytics"],
+                    "nomEntreprise": "Microsoft"
                 },
-                "expected_salary_range": (150000, 250000)
+                "expected_salary_range": (150000, 350000)
             }
         ]
         
