@@ -165,7 +165,18 @@ class BackendTester:
                             self.log_test(f"Registration - {test_case['name']}", False, f"Missing response fields: {missing_fields}", data)
                             all_passed = False
                         else:
-                            self.log_test(f"Registration - {test_case['name']}", True, f"User registered successfully: {data['email']}, Role: {data['role']}")
+                            # Verify skills and nomEntreprise are properly stored
+                            expected_skills = test_case["data"].get("skills", [])
+                            expected_company = test_case["data"].get("nomEntreprise", "")
+                            
+                            if "skills" in data and "nomEntreprise" in data:
+                                if data["skills"] == expected_skills and data["nomEntreprise"] == expected_company:
+                                    self.log_test(f"Registration - {test_case['name']}", True, f"User registered successfully: {data['email']}, Role: {data['role']}, Skills: {len(data['skills'])}, Company: {data['nomEntreprise']}")
+                                else:
+                                    self.log_test(f"Registration - {test_case['name']}", False, f"Skills or company mismatch. Expected skills: {expected_skills}, Got: {data.get('skills')}. Expected company: {expected_company}, Got: {data.get('nomEntreprise')}", data)
+                                    all_passed = False
+                            else:
+                                self.log_test(f"Registration - {test_case['name']}", True, f"User registered successfully: {data['email']}, Role: {data['role']}")
                             registered_users.append(test_case["data"])
                     else:
                         self.log_test(f"Registration - {test_case['name']}", False, f"HTTP {response.status_code}", response.text)
