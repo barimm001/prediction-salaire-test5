@@ -1207,6 +1207,14 @@ class BackendTester:
         
         if ml_total > 0:
             print(f"📊 ML & Prediction Tests: {ml_passed}/{ml_total} passed ({(ml_passed/ml_total)*100:.1f}%)")
+        
+        # New Features Tests Summary
+        new_features_tests = [result for result in self.test_results if any(keyword in result["test"] for keyword in ["Skills Management", "Enhanced Prediction", "Analytics", "Skills Impact"])]
+        new_features_passed = sum(1 for result in new_features_tests if result["success"])
+        new_features_total = len(new_features_tests)
+        
+        if new_features_total > 0:
+            print(f"🔧 New Features Tests: {new_features_passed}/{new_features_total} passed ({(new_features_passed/new_features_total)*100:.1f}%)")
         print()
         
         # Critical Issues
