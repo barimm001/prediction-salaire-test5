@@ -728,7 +728,7 @@ const PredictionTab = () => {
             </div>
 
             {/* Company Size */}
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Company Size
               </label>
@@ -745,6 +745,40 @@ const PredictionTab = () => {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Skills */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Skills
+              </label>
+              <Select
+                isMulti
+                value={availableSkills.filter(skill => formData.skills.includes(skill.value))}
+                onChange={(selectedOptions) => {
+                  const selectedSkills = selectedOptions ? selectedOptions.map(option => option.value) : [];
+                  handleInputChange('skills', selectedSkills);
+                }}
+                options={availableSkills}
+                className="basic-multi-select"
+                classNamePrefix="select"
+                placeholder="Select your skills..."
+              />
+            </div>
+
+            {/* Company Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Company Name
+              </label>
+              <input
+                type="text"
+                value={formData.nomEntreprise}
+                onChange={(e) => handleInputChange('nomEntreprise', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter company name"
+                required
+              />
             </div>
           </div>
 
