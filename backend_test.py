@@ -55,40 +55,59 @@ class BackendTester:
             return False
 
     def test_user_registration(self):
-        """Test user registration with various scenarios"""
+        """Test user registration with various scenarios including new skills and nomEntreprise fields"""
         test_cases = [
             {
-                "name": "Valid Admin Registration",
+                "name": "Valid Admin Registration with Skills",
                 "data": {
                     "username": f"admin_user_{uuid.uuid4().hex[:8]}",
-                    "email": f"admin_{uuid.uuid4().hex[:8]}@company.com",
+                    "email": f"admin_{uuid.uuid4().hex[:8]}@techcorp.com",
                     "password": "securepass123",
                     "role": "admin",
-                    "name": "Admin User"
+                    "name": "Sarah Johnson",
+                    "skills": ["Python", "Machine Learning", "AWS", "Leadership"],
+                    "nomEntreprise": "TechCorp Solutions"
                 },
                 "should_succeed": True
             },
             {
-                "name": "Valid Employee Registration", 
+                "name": "Valid Employee Registration with Skills", 
                 "data": {
                     "username": f"employee_user_{uuid.uuid4().hex[:8]}",
-                    "email": f"employee_{uuid.uuid4().hex[:8]}@company.com",
+                    "email": f"employee_{uuid.uuid4().hex[:8]}@datatech.com",
                     "password": "password123",
                     "role": "employee",
-                    "name": "Employee User"
+                    "name": "Michael Chen",
+                    "skills": ["JavaScript", "React", "Node.js", "SQL"],
+                    "nomEntreprise": "DataTech Inc"
                 },
                 "should_succeed": True
             },
             {
-                "name": "Valid Financial Analyst Registration",
+                "name": "Valid Financial Analyst Registration with Skills",
                 "data": {
                     "username": f"analyst_user_{uuid.uuid4().hex[:8]}",
-                    "email": f"analyst_{uuid.uuid4().hex[:8]}@company.com", 
+                    "email": f"analyst_{uuid.uuid4().hex[:8]}@financeai.com", 
                     "password": "analyst123",
                     "role": "financial_analyst",
-                    "name": "Financial Analyst"
+                    "name": "Emma Rodriguez",
+                    "skills": ["Excel", "Tableau", "Python", "Statistics", "Power BI"],
+                    "nomEntreprise": "FinanceAI Corp"
                 },
                 "should_succeed": True
+            },
+            {
+                "name": "Registration without nomEntreprise (should fail)",
+                "data": {
+                    "username": f"no_company_{uuid.uuid4().hex[:8]}",
+                    "email": f"nocompany_{uuid.uuid4().hex[:8]}@test.com",
+                    "password": "password123",
+                    "role": "employee",
+                    "name": "Test User",
+                    "skills": ["Python"]
+                    # Missing nomEntreprise
+                },
+                "should_succeed": False
             },
             {
                 "name": "Password Too Short (5 chars)",
