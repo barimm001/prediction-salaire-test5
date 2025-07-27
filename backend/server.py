@@ -663,6 +663,292 @@ async def get_all_skills():
     
     return {"skills": all_skills}
 
+# Analytics endpoints for financial analysts
+@api_router.get("/analytics/salary-trends")
+async def get_salary_trends(
+    current_user: UserResponse = Depends(require_role(["admin", "financial_analyst"]))
+):
+    """Get salary trends by job and company over time"""
+    try:
+        # Get salary data from database
+        salary_data = await db.salary_data.find({}).to_list(1000)
+        df = pd.DataFrame(salary_data)
+        
+        if df.empty:
+            return {"message": "No data available"}
+        
+        # Group by job title and company for trends
+        trends = []
+        for job in df['job_title'].unique():
+            for company in df['nomEntreprise'].unique():
+                job_company_data = df[(df['job_title'] == job) & (df['nomEntreprise'] == company)]
+                if not job_company_data.empty:
+                    avg_salary = job_company_data['salary_in_usd'].mean()
+                    trends.append({
+                        'job_title': job,
+                        'company': company,
+                        'avg_salary': round(avg_salary, 2),
+                        'count': len(job_company_data)
+                    })
+        
+        return {"trends": trends}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analytics error: {str(e)}")
+
+@api_router.get("/analytics/company-summaries")
+async def get_company_summaries(
+    current_user: UserResponse = Depends(require_role(["admin", "financial_analyst"]))
+):
+    """Get salary summaries by company"""
+    try:
+        salary_data = await db.salary_data.find({}).to_list(1000)
+        df = pd.DataFrame(salary_data)
+        
+        if df.empty:
+            return {"message": "No data available"}
+        
+        # Calculate company summaries
+        company_summaries = []
+        for company in df['nomEntreprise'].unique():
+            company_data = df[df['nomEntreprise'] == company]
+            
+            summary = {
+                'company': company,
+                'total_employees': len(company_data),
+                'total_salary_cost': int(company_data['salary_in_usd'].sum()),
+                'avg_salary': round(company_data['salary_in_usd'].mean(), 2),
+                'median_salary': round(company_data['salary_in_usd'].median(), 2),
+                'min_salary': int(company_data['salary_in_usd'].min()),
+                'max_salary': int(company_data['salary_in_usd'].max()),
+                'monthly_cost': int(company_data['salary_in_usd'].sum() / 12),
+                'annual_cost': int(company_data['salary_in_usd'].sum())
+            }
+            company_summaries.append(summary)
+        
+        # Sort by total salary cost
+        company_summaries.sort(key=lambda x: x['total_salary_cost'], reverse=True)
+        
+        return {"summaries": company_summaries}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analytics error: {str(e)}")
+
+@api_router.get("/analytics/correlation-heatmap")
+async def get_correlation_heatmap(
+    current_user: UserResponse = Depends(require_role(["admin", "financial_analyst"]))
+):
+    """Generate correlation heatmap between variables"""
+    try:
+        salary_data = await db.salary_data.find({}).to_list(1000)
+        df = pd.DataFrame(salary_data)
+        
+        if df.empty:
+            return {"message": "No data available"}
+        
+        # Prepare numerical data for correlation
+        numerical_cols = ['work_year', 'remote_ratio', 'salary_in_usd', 
+                         'high_value_skills', 'medium_value_skills', 'standard_skills']
+        
+        # Add encoded categorical variables
+        categorical_cols = ['experience_level', 'employment_type', 'company_size']
+        for col in categorical_cols:
+            if col in df.columns:
+                le = LabelEncoder()
+                df[f'{col}_encoded'] = le.fit_transform(df[col])
+                numerical_cols.append(f'{col}_encoded')
+        
+        correlation_data = df[numerical_cols].corr()
+        
+        # Convert to list of dictionaries for frontend
+        correlation_matrix = []
+        for i, row_name in enumerate(correlation_data.index):
+            for j, col_name in enumerate(correlation_data.columns):
+                correlation_matrix.append({
+                    'x': col_name,
+                    'y': row_name,
+                    'value': round(correlation_data.iloc[i, j], 3)
+                })
+        
+        return {
+            "correlation_matrix": correlation_matrix,
+            "variables": list(correlation_data.columns)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analytics error: {str(e)}")
+
+@api_router.get("/analytics/top-rankings")
+async def get_top_rankings(
+    current_user: UserResponse = Depends(require_role(["admin", "financial_analyst"]))
+):
+    """Get top jobs, companies, and skills rankings"""
+    try:
+        salary_data = await db.salary_data.find({}).to_list(1000)
+        df = pd.DataFrame(salary_data)
+        
+        if df.empty:
+            return {"message": "No data available"}
+        
+        # Top jobs by salary
+        top_jobs = df.groupby('job_title')['salary_in_usd'].agg(['mean', 'count']).reset_index()
+        top_jobs = top_jobs[top_jobs['count'] >= 3]  # At least 3 data points
+        top_jobs = top_jobs.sort_values('mean', ascending=False).head(10)
+        top_jobs_list = [
+            {
+                'job_title': row['job_title'],
+                'avg_salary': round(row['mean'], 2),
+                'count': int(row['count'])
+            }
+            for _, row in top_jobs.iterrows()
+        ]
+        
+        # Top companies by salary
+        top_companies = df.groupby('nomEntreprise')['salary_in_usd'].agg(['mean', 'count']).reset_index()
+        top_companies = top_companies[top_companies['count'] >= 3]
+        top_companies = top_companies.sort_values('mean', ascending=False).head(10)
+        top_companies_list = [
+            {
+                'company': row['nomEntreprise'],
+                'avg_salary': round(row['mean'], 2),
+                'count': int(row['count'])
+            }
+            for _, row in top_companies.iterrows()
+        ]
+        
+        # Top skills by occurrence and salary impact
+        all_skills = []
+        skill_salaries = {}
+        
+        for _, row in df.iterrows():
+            for skill in row['skills']:
+                all_skills.append(skill)
+                if skill not in skill_salaries:
+                    skill_salaries[skill] = []
+                skill_salaries[skill].append(row['salary_in_usd'])
+        
+        skill_counts = pd.Series(all_skills).value_counts()
+        
+        top_skills_list = []
+        for skill, count in skill_counts.head(15).items():
+            avg_salary = np.mean(skill_salaries[skill]) if skill in skill_salaries else 0
+            top_skills_list.append({
+                'skill': skill,
+                'count': int(count),
+                'avg_salary': round(avg_salary, 2)
+            })
+        
+        return {
+            "top_jobs": top_jobs_list,
+            "top_companies": top_companies_list,
+            "top_skills": top_skills_list
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analytics error: {str(e)}")
+
+@api_router.get("/analytics/annual-summary")
+async def get_annual_summary(
+    current_user: UserResponse = Depends(require_role(["admin", "financial_analyst"]))
+):
+    """Get annual summary with recruitment and salary evolution"""
+    try:
+        salary_data = await db.salary_data.find({}).to_list(1000)
+        df = pd.DataFrame(salary_data)
+        
+        if df.empty:
+            return {"message": "No data available"}
+        
+        # Annual summaries by year
+        annual_summaries = []
+        for year in df['work_year'].unique():
+            year_data = df[df['work_year'] == year]
+            
+            summary = {
+                'year': int(year),
+                'total_recruitments': len(year_data),
+                'avg_salary': round(year_data['salary_in_usd'].mean(), 2),
+                'median_salary': round(year_data['salary_in_usd'].median(), 2),
+                'total_salary_cost': int(year_data['salary_in_usd'].sum()),
+                'salary_growth': 0  # Will calculate below
+            }
+            annual_summaries.append(summary)
+        
+        # Calculate salary growth year over year
+        annual_summaries.sort(key=lambda x: x['year'])
+        for i in range(1, len(annual_summaries)):
+            prev_salary = annual_summaries[i-1]['avg_salary']
+            curr_salary = annual_summaries[i]['avg_salary']
+            growth = ((curr_salary - prev_salary) / prev_salary) * 100 if prev_salary > 0 else 0
+            annual_summaries[i]['salary_growth'] = round(growth, 2)
+        
+        return {"annual_summaries": annual_summaries}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analytics error: {str(e)}")
+
+@api_router.get("/analytics/salary-distribution")
+async def get_salary_distribution(
+    current_user: UserResponse = Depends(require_role(["admin", "financial_analyst"]))
+):
+    """Get salary distribution data for boxplots and histograms"""
+    try:
+        salary_data = await db.salary_data.find({}).to_list(1000)
+        df = pd.DataFrame(salary_data)
+        
+        if df.empty:
+            return {"message": "No data available"}
+        
+        # Salary distribution by company size
+        distribution_by_size = []
+        for size in df['company_size'].unique():
+            size_data = df[df['company_size'] == size]
+            salaries = size_data['salary_in_usd'].tolist()
+            
+            distribution_by_size.append({
+                'category': f"Company Size {size}",
+                'salaries': salaries,
+                'q1': float(np.percentile(salaries, 25)),
+                'median': float(np.percentile(salaries, 50)),
+                'q3': float(np.percentile(salaries, 75)),
+                'min': float(min(salaries)),
+                'max': float(max(salaries)),
+                'mean': round(np.mean(salaries), 2)
+            })
+        
+        # Salary distribution by experience level
+        distribution_by_experience = []
+        for exp in df['experience_level'].unique():
+            exp_data = df[df['experience_level'] == exp]
+            salaries = exp_data['salary_in_usd'].tolist()
+            
+            distribution_by_experience.append({
+                'category': f"Experience {exp}",
+                'salaries': salaries,
+                'q1': float(np.percentile(salaries, 25)),
+                'median': float(np.percentile(salaries, 50)),
+                'q3': float(np.percentile(salaries, 75)),
+                'min': float(min(salaries)),
+                'max': float(max(salaries)),
+                'mean': round(np.mean(salaries), 2)
+            })
+        
+        # Overall salary histogram data
+        salary_histogram = []
+        salaries = df['salary_in_usd'].tolist()
+        hist, bin_edges = np.histogram(salaries, bins=20)
+        
+        for i in range(len(hist)):
+            salary_histogram.append({
+                'range_start': int(bin_edges[i]),
+                'range_end': int(bin_edges[i+1]),
+                'count': int(hist[i]),
+                'range_label': f"${int(bin_edges[i]/1000)}k-${int(bin_edges[i+1]/1000)}k"
+            })
+        
+        return {
+            "distribution_by_company_size": distribution_by_size,
+            "distribution_by_experience": distribution_by_experience,
+            "salary_histogram": salary_histogram
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analytics error: {str(e)}")
+
 # Employee management endpoints (admin only)
 @api_router.post("/employees", response_model=Employee)
 async def create_employee(
