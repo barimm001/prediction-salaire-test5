@@ -208,7 +208,9 @@ const AuthPage = () => {
     password: '',
     username: '',
     name: '',
-    role: 'employee'
+    role: 'employee',
+    skills: [],
+    nomEntreprise: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
